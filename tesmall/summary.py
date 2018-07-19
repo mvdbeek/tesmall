@@ -3,6 +3,7 @@ import datetime
 import argparse
 import logging
 import os
+import shutil
 import string
 from math import pi, cos, sin
 from collections import defaultdict, Counter
@@ -10,9 +11,6 @@ import pandas as pd
 import bokeh
 from bokeh.layouts import column, row, layout
 from bokeh.plotting import figure
-from bokeh.charts import Bar, output_file, save
-from bokeh.charts.operations import blend
-from bokeh.charts.attributes import cat, color
 from bokeh.models import HoverTool, ColumnDataSource
 from bokeh.models.widgets import DataTable, TableColumn, NumberFormatter
 from bokeh.embed import components
@@ -268,18 +266,26 @@ def output_components(prefix, order, maxaln):
     comp = "{0}.comp".format(prefix)
 
     def plot_read_dist(rinfo):
+        shutil.copy(rinfo, '/Users/mvandenb/setup_plot_function.tab')
         df = pd.read_table(rinfo)
         data = df[['length', 'mapper', 'count']].groupby(['length', 'mapper']).count()
         data = data.apply(lambda s: s/data.sum()*100, axis=1).reset_index()
-        p = Bar(data, plot_width=500, plot_height=400,
-            label='length', values='count', agg='sum',
-            stack=cat(columns='mapper', sort=False), legend='top_right',
-            color=color(columns='mapper', palette=["#f98283", "#a4a4a4"], sort=False),
-            xlabel='read length (nt)', ylabel='proportion (%)',
-            ygrid=False,
-            tooltips=[('length', '@length'), ('mapper', '@mapper'), ('percent', '@height')])
+        p = figure(plot_width=500,
+                   plot_height=300,
+                   x_axis_label='read length (nt)',
+                   y_axis_label='proportion (%)',
+                   tooltips=[('length', '@length'), ('mapper', '@mapper'), ('percent', '@height')])
+        p.ygrid.visible = False
         p.toolbar.logo = None
         p.outline_line_color = None
+        p.legend.location = 'top_right'
+        categories = df['mapper'].unique()
+        p.vbar_stack(y=categories, x=df['length'], legend=categories, source=df)
+        # p = Bar(data,
+        #     label='length', values='count', agg='sum',
+        #     stack=cat(columns='mapper', sort=False),
+        #     color=color(columns='mapper', palette=["#f98283", "#a4a4a4"], sort=False),
+        #     )
         return p
 
     rdist = plot_read_dist(rinfo)
